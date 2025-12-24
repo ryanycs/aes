@@ -1,2 +1,19 @@
 __pycache__/
 .venv/
+
+# modelsim
+work/
+transcript
+
+# vcs
+csrc/
+simv.daidir/
+simv
+ucli.key
+
+# nWave
+nWaveLog/
+BSSLib.lib++/
+novas.rc
+novas.conf
+novas_dump.log
