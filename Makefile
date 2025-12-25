@@ -3,7 +3,7 @@ DEF    = +define+FSDB
 
 test_aes:
 	mkdir -p output
-	vcs -R -full64 -sverilog tests/test_aes.sv \
+	vcs -R -full64 -sverilog tests/test_aes/tb.sv \
 	$(INCDIR) $(DEF) \
 	-debug_access+all \
 	+notimingcheck
