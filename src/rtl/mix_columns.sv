@@ -1,3 +1,8 @@
+/*
+ * mix_columns.sv
+ * --------------
+ */
+
 module mix_columns(
     input  logic         valid_i,
     input  logic [127:0] state_i,

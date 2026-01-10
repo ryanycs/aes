@@ -1,5 +1,4 @@
 `timescale 1ns/10ps
-`include "aes_ctr.sv"
 `define CYCLE 10
 `define MAX_CYCLES 1000
 `define NUM_TESTS 4

@@ -1,7 +1,7 @@
-`include "sub_bytes.sv"
-`include "shift_rows.sv"
-`include "mix_columns.sv"
-`include "add_round_key.sv"
+/*
+ * round.sv
+ * --------
+ */
 
 module round #(
     parameter FINAL = 0

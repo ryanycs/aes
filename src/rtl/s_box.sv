@@ -1,3 +1,8 @@
+/*
+ * s_box.sv
+ * --------
+ */
+
 module s_box(
     input  logic [7:0]   data_i,
     output logic [7:0]   data_o

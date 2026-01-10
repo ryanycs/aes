@@ -3,7 +3,6 @@
  * ----------------
  * Description: Key Expansion Module
  */
-`include "sub_word.sv"
 
 module key_expansion(
     input  logic         clk,

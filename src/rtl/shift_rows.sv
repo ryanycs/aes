@@ -1,3 +1,8 @@
+/*
+ * shift_rows.sv
+ * -------------
+ */
+
 module shift_rows(
     input  logic         valid_i,
     input  logic [127:0] state_i,

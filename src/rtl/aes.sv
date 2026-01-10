@@ -12,7 +12,6 @@
  *     - mix_columns.sv
  *     - add_round_key.sv
  */
-`include "round.sv"
 
 module aes(
     input  logic         clk,
