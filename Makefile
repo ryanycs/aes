@@ -1,16 +1,31 @@
-INCDIR = +incdir+vsrc
-DEF    = +define+FSDB
+ROOT_DIR := $(shell pwd)
+INC_DIR := +incdir+include
 
-test_aes:
-	mkdir -p output
-	vcs -R -full64 -sverilog tests/test_aes/tb.sv \
-	$(INCDIR) $(DEF) \
-	-debug_access+all \
-	+notimingcheck
+TESTCASES := tests/testcases.txt
 
-test_mix_columns:
-	mkdir -p output
-	vcs -R -full64 -sverilog tests/test_mix_columns/tb.sv \
-	$(INCDIR) $(DEF) \
-	-debug_access+all \
-	+notimingcheck
+# VCS
+VCS := vcs
+VCS_FLAGS := -debug_access+all +notimingcheck +define+FSDB
+
+# ModelSim
+VLOG := vlog.exe
+VSIM := vsim.exe
+VSIM_FLAGS := -do "run -all; quit"
+
+list_tests:
+	@cat $(TESTCASES)
+
+%.vsim:
+	@if [ ! -f "tests/$*/tb.sv" ]; then \
+		echo "[Error] Test not found: $*"; \
+		exit 1; \
+	fi
+	$(VLOG) tests/$*/tb.sv -f filelist.f $(INC_DIR)
+	$(VSIM) -c work.tb $(VSIM_FLAGS)
+
+%.vcs:
+	@if [ ! -f "tests/$*/tb.sv" ]; then \
+		echo "[Error] Test not found: $*"; \
+		exit 1; \
+	fi
+	$(VCS) -R -full64 -sverilog tests/$*/tb.sv -f filelist.f $(INC_DIR) $(VCS_FLAGS)
