@@ -1,3 +1,8 @@
+/*
+ * add_round_key.sv
+ * ----------------
+ */
+
 module add_round_key(
     input  logic         valid_i,
     input  logic [127:0] state_i,

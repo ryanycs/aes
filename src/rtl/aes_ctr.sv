@@ -3,10 +3,6 @@
  * ----------
  * Description : AES-CTR Module
  */
-`include "aes.sv"
-`include "key_expansion.sv"
-`include "fifo.sv"
-`include "inc.sv"
 
 module aes_ctr(
     input  logic         clk,

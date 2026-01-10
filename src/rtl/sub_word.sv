@@ -1,4 +1,7 @@
-`include "s_box.sv"
+/*
+ * sub_word.sv
+ * -----------
+ */
 
 module sub_word(
     input  logic [31:0] word_i,

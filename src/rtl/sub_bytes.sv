@@ -1,4 +1,7 @@
-`include "s_box.sv"
+/*
+ * sub_bytes.sv
+ * ------------
+ */
 
 module sub_bytes(
     input  logic         clk,

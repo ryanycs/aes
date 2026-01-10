@@ -1,3 +1,8 @@
+/*
+ * inc.sv
+ * ------
+ */
+
 module inc #(
     parameter s = 32
 )(
