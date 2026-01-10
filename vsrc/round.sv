@@ -8,6 +8,7 @@ module round #(
 )(
     input  logic         clk,
     input  logic         rst_n,
+    input  logic         en,
     input  logic         valid_i,
     input  logic [127:0] state_i,
     input  logic [127:0] round_key_i,
@@ -24,9 +25,13 @@ logic [127:0] shift_rows_out;
 logic         mix_columns_valid;
 logic [127:0] mix_columns_out;
 
+logic         add_round_key_valid;
+logic [127:0] add_round_key_out;
+
 sub_bytes u_sub_bytes(
     .clk,
     .rst_n,
+    .en,
     .valid_i (valid_i),
     .state_i (state_i),
     .valid_o (sub_bytes_valid),
@@ -46,13 +51,11 @@ generate
             .valid_i     (shift_rows_valid),
             .state_i     (shift_rows_out),
             .round_key_i (round_key_i),
-            .valid_o     (valid_o),
-            .state_o     (state_o)
+            .valid_o     (add_round_key_valid),
+            .state_o     (add_round_key_out)
         );
     end else begin : normal_round
         mix_columns u_mix_columns(
-            .clk,
-            .rst_n,
             .valid_i (shift_rows_valid),
             .state_i (shift_rows_out),
             .valid_o (mix_columns_valid),
@@ -63,10 +66,28 @@ generate
             .valid_i     (mix_columns_valid),
             .state_i     (mix_columns_out),
             .round_key_i (round_key_i),
-            .valid_o     (valid_o),
-            .state_o     (state_o)
+            .valid_o     (add_round_key_valid),
+            .state_o     (add_round_key_out)
         );
     end
 endgenerate
+
+// valid_o
+always_ff @(posedge clk or negedge rst_n) begin
+    if (!rst_n) begin
+        valid_o <= 1'b0;
+    end else if (en) begin
+        valid_o <= add_round_key_valid;
+    end
+end
+
+// state_o
+always_ff @(posedge clk or negedge rst_n) begin
+    if (!rst_n) begin
+        state_o <= 128'd0;
+    end else if (en) begin
+        state_o <= add_round_key_out;
+    end
+end
 
 endmodule

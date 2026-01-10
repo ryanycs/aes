@@ -8,6 +8,7 @@ module tb;
 
 logic         clk;
 logic         rst_n;
+logic         en;
 logic         valid_i;
 logic [127:0] plaintext_i;
 logic         valid_o;
@@ -30,6 +31,7 @@ end
 aes dut(
     .clk          (clk),
     .rst_n        (rst_n),
+    .en           (en),
     .valid_i      (valid_i),
     .plaintext_i  (plaintext_i),
     .round_key_i  (round_key),
@@ -57,13 +59,22 @@ end
 always @(posedge clk or negedge rst_n) begin
     if (!rst_n) begin
         valid_i <= 1'b0;
+        en <= 1'b0;
         plaintext_i <= 128'h0;
         i <= 0;
     end else begin
         if (i < `NUM_TESTS) begin
-            valid_i <= 1'b1;
-            plaintext_i <= plaintexts[i];
-            i <= i + 1;
+            // Randomly enable or disable 'en' signal
+            if ($urandom_range(0,1) == 1) begin
+                en <= 1'b1;
+                valid_i <= 1'b1;
+                plaintext_i <= plaintexts[i];
+                i <= i + 1;
+            end else begin
+                en <= 1'b0;
+                valid_i <= 1'b0;
+                plaintext_i <= 128'h0;
+            end
         end else begin
             valid_i <= 1'b0;
             plaintext_i <= 128'h0;

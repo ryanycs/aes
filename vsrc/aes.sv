@@ -17,9 +17,12 @@
 module aes(
     input  logic         clk,
     input  logic         rst_n,
+    input  logic         en,
+
     input  logic         valid_i,
     input  logic [127:0] plaintext_i,
     input  logic [127:0] round_key_i [10:0],
+
     output logic         valid_o,
     output logic [127:0] ciphertext_o
 );
@@ -42,6 +45,7 @@ generate
         round u_round_i(
             .clk,
             .rst_n,
+            .en,
             .valid_i     (round_valid[i]),
             .state_i     (round_state[i]),
             .round_key_i (round_key_i[i+1]),
@@ -55,6 +59,7 @@ generate
     ) u_final_round(
         .clk,
         .rst_n,
+        .en,
         .valid_i     (round_valid[9]),
         .state_i     (round_state[9]),
         .round_key_i (round_key_i[10]),
