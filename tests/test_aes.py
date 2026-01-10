@@ -23,7 +23,6 @@ def test_aes():
     aes = AES(key)
 
     ciphertext = aes.encrypt(plaintext)
-    print(ciphertext.hex())
     assert ciphertext == expected_ciphertext
 
     decripted = aes.decrypt(ciphertext)

@@ -17,3 +17,5 @@ BSSLib.lib++/
 novas.rc
 novas.conf
 novas_dump.log
+
+output/
