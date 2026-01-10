@@ -10,6 +10,7 @@ module key_expansion(
     input  logic         rst_n,
 
     input  logic         valid_i,
+    output logic         ready_o,
     input  logic [127:0] key_i,
 
     output logic         valid_o,
@@ -208,6 +209,7 @@ end
 //////////////////////////////////////////////////////////////////////
 
 assign valid_o = (state_reg == S_DONE);
+assign ready_o = (state_reg == S_IDLE);
 assign round_key_o = round_key_reg;
 
 endmodule
