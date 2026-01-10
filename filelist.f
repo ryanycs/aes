@@ -1,0 +1,12 @@
+src/rtl/sub_bytes.sv
+src/rtl/sub_word.sv
+src/rtl/fifo.sv
+src/rtl/mix_columns.sv
+src/rtl/add_round_key.sv
+src/rtl/shift_rows.sv
+src/rtl/key_expansion.sv
+src/rtl/s_box.sv
+src/rtl/inc.sv
+src/rtl/round.sv
+src/rtl/aes.sv
+src/rtl/aes_ctr.sv
