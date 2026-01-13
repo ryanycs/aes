@@ -1,7 +1,10 @@
 `timescale 1ns/1ps
+
+`include "define.svh"
+
 `define CYCLE 10
 `define MAX_CYCLES 1000
-`define NUM_TESTS 5
+`define NUM_TESTS 1
 
 module tb;
 
@@ -13,19 +16,33 @@ logic [127:0] plaintext_i;
 logic         valid_o;
 logic [127:0] ciphertext_o;
 
-logic [127:0] round_key [10:0];
-logic [127:0] plaintexts  [`NUM_TESTS:0];
-logic [127:0] ciphertexts [`NUM_TESTS:0];
+logic [127:0] round_key [Nr:0];
+logic [127:0] plaintext [0:0];
+logic [127:0] ciphertext [0:0];
 
 int i = 0;
 int recv = 0;
 int error = 0;
 
+`ifdef AES192
 initial begin
-    $readmemh("tests/test_aes/round_key.hex", round_key);
-    $readmemh("tests/test_aes/input.hex", plaintexts);
-    $readmemh("tests/test_aes/golden.hex", ciphertexts);
+    $readmemh("tests/test_aes/aes192/round_key.hex", round_key);
+    $readmemh("tests/test_aes/aes192/plaintext.hex", plaintext);
+    $readmemh("tests/test_aes/aes192/ciphertext.hex", ciphertext);
 end
+`elsif AES256
+initial begin
+    $readmemh("tests/test_aes/aes256/round_key.hex", round_key);
+    $readmemh("tests/test_aes/aes256/plaintext.hex", plaintext);
+    $readmemh("tests/test_aes/aes256/ciphertext.hex", ciphertext);
+end
+`else
+initial begin
+    $readmemh("tests/test_aes/aes128/round_key.hex", round_key);
+    $readmemh("tests/test_aes/aes128/plaintext.hex", plaintext);
+    $readmemh("tests/test_aes/aes128/ciphertext.hex", ciphertext);
+end
+`endif
 
 aes dut(
     .clk          (clk),
@@ -67,7 +84,7 @@ always @(posedge clk or negedge rst_n) begin
             if ($urandom_range(0,1) == 1) begin
                 en <= 1'b1;
                 valid_i <= 1'b1;
-                plaintext_i <= plaintexts[i];
+                plaintext_i <= plaintext[i];
                 i <= i + 1;
             end else begin
                 en <= 1'b0;
@@ -84,8 +101,8 @@ end
 // Check outputs
 always @(posedge clk) begin
     if (valid_o) begin
-        if (ciphertext_o !== ciphertexts[recv]) begin
-            $display("Error at test %0d: expected %h, got %h", recv, ciphertexts[recv], ciphertext_o);
+        if (ciphertext_o !== ciphertext[recv]) begin
+            $display("Error at test %0d: expected %h, got %h", recv, ciphertext[recv], ciphertext_o);
             error <= error + 1;
         end
         recv <= recv + 1;
