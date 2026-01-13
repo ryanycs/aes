@@ -3,17 +3,18 @@
  * ----------------
  * Description: Key Expansion Module
  */
+`include "define.svh"
 
 module key_expansion(
-    input  logic         clk,
-    input  logic         rst_n,
+    input  logic                clk,
+    input  logic                rst_n,
 
-    input  logic         valid_i,
-    output logic         ready_o,
-    input  logic [127:0] key_i,
+    input  logic                valid_i,
+    output logic                ready_o,
+    input  logic [KEY_SIZE-1:0] key_i,
 
-    output logic         valid_o,
-    output logic [127:0] round_key_o [0:10]
+    output logic                valid_o,
+    output logic [127:0]        round_key_o [Nr:0]
 );
 
 //////////////////////////////////////////////////////////////////////
@@ -33,8 +34,8 @@ typedef enum logic [1:0] {
 //////////////////////////////////////////////////////////////////////
 
 state_e       state_reg;
-logic [3:0]   round_idx_reg;
-logic [127:0] round_key_reg [10:0];
+logic [5:0]   idx_reg;
+logic [31:0]  w_reg [Nb * (Nr + 1) - 1:0];
 
 logic [7:0]   rcon_reg;
 logic [31:0]  temp_reg; // sub_word(rot_word(w3))
@@ -44,18 +45,16 @@ logic [31:0]  temp_reg; // sub_word(rot_word(w3))
 // Wire
 //////////////////////////////////////////////////////////////////////
 
-state_e       state_next;
-logic [127:0] round_key_prev;
-logic [127:0] round_key_next;
+state_e      state_next;
 
-logic [31:0]  temp;
+logic [31:0] w_next [Nk - 1:0];
 
-logic [31:0]  w0_prev, w1_prev, w2_prev, w3_prev;
-logic [31:0]  w0, w1, w2, w3;
+logic [7:0]  rcon_next;
 
-logic [7:0]   rcon_next;
+logic [31:0] sub_word_in;
 
-logic [31:0]  temp_xor_rcon; // temp ^ {rcon, 24'd0}
+logic [31:0] temp;
+logic [31:0] temp_xor_rcon; // temp ^ {rcon, 24'd0}
 
 
 //////////////////////////////////////////////////////////////////////
@@ -81,9 +80,15 @@ endfunction
 //////////////////////////////////////////////////////////////////////
 
 sub_word u_sub_word(
-    .word_i (rot_word(w3_prev)),
+    .word_i (sub_word_in),
     .word_o (temp)
 );
+`ifdef AES256
+assign sub_word_in = (idx_reg[2:0] == 3'b0) ?
+                     rot_word(w_reg[idx_reg - 1]) : w_reg[idx_reg - 1];
+`else
+assign sub_word_in = rot_word(w_reg[idx_reg - 1]);
+`endif
 
 // FSM
 always_comb begin
@@ -97,7 +102,7 @@ always_comb begin
         end
 
         S_EXPAND: begin
-            if (round_idx_reg == 4'd10) begin
+            if (idx_reg >= Nb * (Nr + 1)) begin
                 state_next = S_DONE;
             end else begin
                 state_next = S_SUB_WORD;
@@ -119,7 +124,11 @@ always_comb begin
     if (state_reg == S_IDLE) begin
         rcon_next = 8'h01;
     end else if (state_reg == S_EXPAND) begin
+        `ifdef AES256
+        rcon_next = (idx_reg[2:0] == 3'd0) ? xtime(rcon_reg) : rcon_reg;
+        `else
         rcon_next = xtime(rcon_reg);
+        `endif
     end else begin
         rcon_next = rcon_reg;
     end
@@ -127,20 +136,21 @@ end
 
 assign temp_xor_rcon = temp_reg ^ {rcon_reg, 24'd0};
 
-// Unpack previous round key
-assign round_key_prev = round_key_reg[round_idx_reg - 1];
-assign {w0_prev, w1_prev, w2_prev, w3_prev} = round_key_prev;
-
-// w0, w1, w2, w3
+// w_next
 always_comb begin
-    w0 = w0_prev ^ temp_xor_rcon;
-    w1 = w1_prev ^ w0_prev ^ temp_xor_rcon;
-    w2 = w2_prev ^ w1_prev ^ w0_prev ^ temp_xor_rcon;
-    w3 = w3_prev ^ w2_prev ^ w1_prev ^ w0_prev ^ temp_xor_rcon;
-end
+    `ifdef AES256
+    if (idx_reg[2:0] == 3'd0)
+        w_next[0] = w_reg[idx_reg - Nk] ^ temp_xor_rcon;
+    else
+        w_next[0] = w_reg[idx_reg - Nk] ^ temp;
+    `else
+        w_next[0] = w_reg[idx_reg - Nk] ^ temp_xor_rcon;
+    `endif
 
-// Pack next round key
-assign round_key_next = {w0, w1, w2, w3};
+    for (int i = 1; i < EXP_PER_CYCLE; i = i + 1) begin
+        w_next[i] = w_reg[idx_reg - Nk + i[5:0]] ^ w_next[i - 1];
+    end
+end
 
 
 //////////////////////////////////////////////////////////////////////
@@ -156,31 +166,39 @@ always_ff @(posedge clk or negedge rst_n) begin
     end
 end
 
-// round_idx
+// idx
 always_ff @(posedge clk or negedge rst_n) begin
     if (!rst_n) begin
-        round_idx_reg <= 4'd1;
+        idx_reg <= Nk;
+
     end else if (state_reg == S_EXPAND) begin
-        round_idx_reg <= round_idx_reg + 4'd1;
+        idx_reg <= idx_reg + EXP_PER_CYCLE;
+
     end else if (state_reg == S_SUB_WORD) begin
-        round_idx_reg <= round_idx_reg;
+        idx_reg <= idx_reg;
+
     end else begin
-        round_idx_reg <= 4'd1;
+        idx_reg <= Nk;
+
     end
 end
 
-// round_keys
+// w
 always_ff @(posedge clk or negedge rst_n) begin
     if (!rst_n) begin
-        for (int i = 0; i < 11; i = i + 1) begin
-            round_key_reg[i] <= 128'd0;
+        for (int i = 0; i < Nb * (Nr + 1); i = i + 1) begin
+            w_reg[i] <= 32'd0;
         end
     end else if (state_reg == S_IDLE) begin
         if (valid_i)
-            round_key_reg[0] <= key_i;
+            for (int i = 0; i < Nk; i = i + 1) begin
+                w_reg[i] <= key_i[(KEY_SIZE - i * 32 - 1) -: 32];
+            end
 
     end else if (state_reg == S_EXPAND) begin
-        round_key_reg[round_idx_reg] <= round_key_next;
+        for (int i = 0; i < EXP_PER_CYCLE; i = i + 1) begin
+            w_reg[idx_reg + i[5:0]] <= w_next[i];
+        end
     end
 end
 
@@ -209,6 +227,17 @@ end
 
 assign valid_o = (state_reg == S_DONE);
 assign ready_o = (state_reg == S_IDLE);
-assign round_key_o = round_key_reg;
+
+genvar i;
+generate
+    for (i = 0; i <= Nr; i = i + 1) begin
+        assign round_key_o[i] = {
+            w_reg[i * Nb],
+            w_reg[i * Nb + 1],
+            w_reg[i * Nb + 2],
+            w_reg[i * Nb + 3]
+        };
+    end
+endgenerate
 
 endmodule
