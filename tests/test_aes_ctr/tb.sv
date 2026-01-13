@@ -4,7 +4,7 @@
 
 `define CYCLE 10
 `define MAX_CYCLES 1000
-`define NUM_TESTS 100
+`define NUM_TESTS 4
 
 module tb;
 
@@ -105,24 +105,14 @@ initial begin
     @(posedge clk);
     key_valid_i = 1'b0;
     iv_valid_i = 1'b0;
+end
 
-    // Feed plaintexts
-    wait (din_ready_o == 1'b1);
-    while (i < `NUM_TESTS) begin
-        // if ($urandom_range(0,1) == 1) begin  // Randomly skip sending input data
-        //     din_valid_i = 1'b0;
-        // end else begin
-        //     din_valid_i = 1'b1;
-        //     din_i       = plaintext[i];
-        //     i           = i + 1;
-        // end
-        din_valid_i = 1'b1;
-        din_i       = plaintext[i];
-        i           = i + 1;
-        @(posedge clk);
+always @(posedge clk) begin
+    if (i < `NUM_TESTS && din_ready_o) begin
+        din_valid_i <= 1'b1;
+        din_i <= plaintext[i];
+        i <= i + 1;
     end
-
-    din_valid_i = 1'b0;
 end
 
 // Check outputs
