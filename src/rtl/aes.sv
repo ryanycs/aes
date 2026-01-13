@@ -12,6 +12,7 @@
  *     - mix_columns.sv
  *     - add_round_key.sv
  */
+`include "define.svh"
 
 module aes(
     input  logic         clk,
@@ -20,15 +21,15 @@ module aes(
 
     input  logic         valid_i,
     input  logic [127:0] plaintext_i,
-    input  logic [127:0] round_key_i [10:0],
+    input  logic [127:0] round_key_i [Nr:0],
 
     output logic         valid_o,
     output logic [127:0] ciphertext_o
 );
 
 // Output of each round
-logic         round_valid [10:0];
-logic [127:0] round_state [10:0];
+logic         round_valid [Nr:0];
+logic [127:0] round_state [Nr:0];
 
 add_round_key u_initial_add_round_key(
     .valid_i     (valid_i),
@@ -40,7 +41,7 @@ add_round_key u_initial_add_round_key(
 
 genvar i;
 generate
-    for (i = 0; i < 9; i = i + 1) begin : round_loop
+    for (i = 0; i < Nr - 1; i = i + 1) begin : round_loop
         round u_round_i(
             .clk,
             .rst_n,
@@ -59,15 +60,15 @@ generate
         .clk,
         .rst_n,
         .en,
-        .valid_i     (round_valid[9]),
-        .state_i     (round_state[9]),
-        .round_key_i (round_key_i[10]),
-        .valid_o     (round_valid[10]),
-        .state_o     (round_state[10])
+        .valid_i     (round_valid[Nr-1]),
+        .state_i     (round_state[Nr-1]),
+        .round_key_i (round_key_i[Nr]),
+        .valid_o     (round_valid[Nr]),
+        .state_o     (round_state[Nr])
     );
 endgenerate
 
-assign valid_o = round_valid[10];
-assign ciphertext_o = round_state[10];
+assign valid_o = round_valid[Nr];
+assign ciphertext_o = round_state[Nr];
 
 endmodule
