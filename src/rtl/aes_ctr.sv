@@ -3,27 +3,28 @@
  * ----------
  * Description : AES-CTR Module
  */
+`include "define.svh"
 
 module aes_ctr(
-    input  logic         clk,
-    input  logic         rst_n,
+    input  logic                clk,
+    input  logic                rst_n,
 
     // Key
-    input  logic [127:0] key_i,
-    input  logic         key_valid_i,
-    output logic         key_ready_o,  // Key expansion module is ready
+    input  logic [KEY_SIZE-1:0] key_i,
+    input  logic                key_valid_i,
+    output logic                key_ready_o,  // Key expansion module is ready
 
     // IV (Initialization Vector)
-    input  logic [127:0] iv_i,         // 128-bit IV for AES CTR
-    input  logic         iv_valid_i,
+    input  logic [127:0]        iv_i,         // 128-bit IV for AES CTR
+    input  logic                iv_valid_i,
 
     // Data Input/Output
-    input  logic [127:0] din_i,
-    input  logic         din_valid_i,
-    output logic         din_ready_o,
+    input  logic [127:0]        din_i,
+    input  logic                din_valid_i,
+    output logic                din_ready_o,
 
-    output logic [127:0] dout_o,
-    output logic         dout_valid_o
+    output logic [127:0]        dout_o,
+    output logic                dout_valid_o
 );
 
 //////////////////////////////////////////////////////////////////////
@@ -49,7 +50,7 @@ logic [127:0] counter_next;
 // key_expansion signal
 logic         key_exp_ready;
 logic         key_exp_done;
-logic [127:0] round_key [0:10];
+logic [127:0] round_key [Nr:0];
 
 // AES signal
 logic         aes_input_valid;
