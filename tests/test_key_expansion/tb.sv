@@ -1,28 +1,43 @@
 `timescale 1ns/1ps
+
+`include "define.svh"
+
 `define CYCLE 10
 `define MAX_CYCLES 1000
-`define NUM_TESTS 2
+`define NUM_TESTS 1
 
 module tb;
 
-logic         clk;
-logic         rst_n;
-logic         valid_i;
-logic [127:0] key_i;
-logic         valid_o;
-logic [127:0] round_key [10:0];
+logic                clk;
+logic                rst_n;
+logic                valid_i;
+logic [KEY_SIZE-1:0] key_i;
+logic                valid_o;
+logic [127:0]        round_key_o [Nr:0];
 
-logic [127:0] input_key [`NUM_TESTS-1 : 0];
-logic [127:0] golden_round_key [`NUM_TESTS*11-1 : 0];
+logic [KEY_SIZE-1:0] key [`NUM_TESTS-1 : 0];
+logic [127:0]        round_key [Nr * `NUM_TESTS : 0];
 
 int i = 0;
 int recv = 0;
 int error = 0;
 
+`ifdef AES192
 initial begin
-    $readmemh("tests/test_key_expansion/input.hex", input_key);
-    $readmemh("tests/test_key_expansion/golden.hex", golden_round_key);
+    $readmemh("tests/test_key_expansion/aes192/key.hex", key);
+    $readmemh("tests/test_key_expansion/aes192/round_key.hex", round_key);
 end
+`elsif AES256
+initial begin
+    $readmemh("tests/test_key_expansion/aes256/key.hex", key);
+    $readmemh("tests/test_key_expansion/aes256/round_key.hex", round_key);
+end
+`else
+initial begin
+    $readmemh("tests/test_key_expansion/aes128/key.hex", key);
+    $readmemh("tests/test_key_expansion/aes128/round_key.hex", round_key);
+end
+`endif
 
 key_expansion dut(
     .clk         (clk),
@@ -30,7 +45,7 @@ key_expansion dut(
     .valid_i     (valid_i),
     .key_i       (key_i),
     .valid_o     (valid_o),
-    .round_key_o (round_key)
+    .round_key_o (round_key_o)
 );
 
 always #(`CYCLE/2) clk = ~clk;
@@ -58,7 +73,7 @@ always @(posedge clk or negedge rst_n) begin
     end else begin
         if (i == 0 || valid_o) begin
             valid_i <= 1'b1;
-            key_i <= input_key[i];
+            key_i <= key[i];
             i <= i + 1;
         end else begin
             valid_i <= 1'b0;
@@ -72,8 +87,8 @@ always @(posedge clk) begin
     if (valid_o) begin
         $display("Checking test case %0d", recv);
         for (int j = 0; j < 11; j = j + 1) begin
-            if (round_key[j] !== golden_round_key[recv * 11 + j]) begin
-                $display("Mismatch at round key %0d: expected %h, got %h", j, golden_round_key[recv * 11 + j], round_key[j]);
+            if (round_key_o[j] !== round_key[recv * 11 + j]) begin
+                $display("Mismatch at round key %0d: expected %h, got %h", j, round_key[recv * 11 + j], round_key_o[j]);
                 error = error + 1;
             end
         end
