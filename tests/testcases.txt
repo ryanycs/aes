@@ -3,3 +3,6 @@ test_aes_ctr
 test_fifo
 test_key_expansion
 test_mix_columns
+test_karatsuba
+test_gf128_mul
+test_ghash
