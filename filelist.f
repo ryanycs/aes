@@ -15,3 +15,4 @@ src/rtl/karatsuba_core.sv
 src/rtl/gf_mul.sv
 src/rtl/gf128_reduction.sv
 src/rtl/gf128_mul.sv
+src/rtl/ghash.sv
