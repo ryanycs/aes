@@ -3,6 +3,7 @@
  * --------
  * Description : GHASH Module
  */
+// TODO: The ghash module currently not well support discontinuous input data stream
 
 module ghash(
     input  logic         clk,
@@ -50,6 +51,8 @@ logic         fifo_pop;
 logic [128:0] fifo_output;
 logic         fifo_empty;
 logic         fifo_full;
+logic         fifo_almost_empty;
+logic         fifo_almost_full;
 
 logic         mul_input_valid;
 logic [127:0] mul_input;
@@ -68,22 +71,25 @@ endfunction
 //////////////////////////////////////////////////////////////////////
 
 fifo #(
-    .DATA_WIDTH(129),
-    .DEPTH(8)
+    .DATA_WIDTH(129)
 ) u_fifo (
     .clk,
     .rst_n,
-    .push_i  (din_valid_i),
-    .data_i  ({last_i, reverse(din_i)}),
-    .pop_i   (fifo_pop),
-    .data_o  (fifo_output),
-    .empty_o (fifo_empty),
-    .full_o  (fifo_full)
+    .push_i         (din_valid_i),
+    .data_i         ({last_i, reverse(din_i)}),
+    .pop_i          (fifo_pop),
+    .data_o         (fifo_output),
+    .empty_o        (fifo_empty),
+    .full_o         (fifo_full),
+    .almost_empty_o (fifo_almost_empty),
+    .almost_full_o  (fifo_almost_full)
 );
 
+// TODO: Using en to stall the multiplier not a good practice
 gf128_mul u_gf128_mul (
     .clk,
     .rst_n,
+    .en       (!fifo_empty || mul_input_valid || state_reg != S_STD_BLOCK),
     .valid_i  (mul_input_valid),
     .a_i      (mul_input),
     .b_i      (h_reg),
@@ -193,7 +199,7 @@ end
 // Output Logic
 //////////////////////////////////////////////////////////////////////
 
-assign din_ready_o  = (!fifo_full) & h_cfg_done;
+assign din_ready_o  = (!fifo_almost_full) & h_cfg_done;
 assign dout_o       = reverse(mul_output);
 assign dout_valid_o = (state_reg == S_LAST_BLOCK) & mul_output_valid;
 
