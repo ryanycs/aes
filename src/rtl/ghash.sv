@@ -169,7 +169,10 @@ always_ff @(posedge clk or negedge rst_n) begin
     if (!rst_n) begin
         mul_output_reg <= 128'h0;
     end else begin
-        if (mul_output_valid)
+        if (state_reg == S_IDLE)
+            mul_output_reg <= 128'h0;
+
+        else if (mul_output_valid)
             mul_output_reg <= mul_output;
     end
 end
