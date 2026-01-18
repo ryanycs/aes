@@ -15,7 +15,7 @@ module aes_ctr(
     output logic                key_ready_o,  // Key expansion module is ready
 
     // IV (Initialization Vector)
-    input  logic [127:0]        iv_i,         // 128-bit IV for AES CTR
+    input  logic [127:0]        iv_i,
     input  logic                iv_valid_i,
 
     // Data Input/Output
@@ -24,7 +24,8 @@ module aes_ctr(
     output logic                din_ready_o,
 
     output logic [127:0]        dout_o,
-    output logic                dout_valid_o
+    output logic                dout_valid_o,
+    input  logic                dout_ready_i
 );
 
 //////////////////////////////////////////////////////////////////////
@@ -64,6 +65,11 @@ logic [127:0] fifo_dout;
 logic         fifo_empty;
 logic         fifo_full;
 
+/* verilator lint_off UNUSED */
+logic         fifo_almost_empty;
+logic         fifo_almost_full;
+/* verilator lint_on UNUSED */
+
 // Flush signal
 logic         flush;
 assign flush = !(key_valid_i | iv_valid_i);  // Flush when new key or IV set
@@ -82,11 +88,11 @@ inc #(.s(32)) u_inc32 (
 key_expansion u_key_expansion(
     .clk,
     .rst_n,
-    .valid_i      (key_valid_i),
-    .ready_o      (key_exp_ready),
-    .key_i        (key_i),
-    .valid_o      (key_exp_done),
-    .round_key_o  (round_key)
+    .valid_i     (key_valid_i),
+    .ready_o     (key_exp_ready),
+    .key_i       (key_i),
+    .valid_o     (key_exp_done),
+    .round_key_o (round_key)
 );
 
 // AES core
@@ -103,18 +109,22 @@ aes u_aes(
 assign aes_input_valid = key_cfg_done_reg & iv_cfg_done_reg;
 
 // FIFO to buffer cipher(CB)
-fifo u_fifo(
+fifo #(
+    .DEPTH(2)
+) u_fifo (
     .clk,
-    .rst_n   (rst_n & flush),
-    .push_i  (fifo_push),
-    .data_i  (aes_ciphertext),
-    .pop_i   (fifo_pop),
-    .data_o  (fifo_dout),
-    .empty_o (fifo_empty),
-    .full_o  (fifo_full)
+    .rst_n          (rst_n & flush),
+    .push_i         (fifo_push),
+    .data_i         (aes_ciphertext),
+    .pop_i          (fifo_pop),
+    .data_o         (fifo_dout),
+    .empty_o        (fifo_empty),
+    .full_o         (fifo_full),
+    .almost_empty_o (fifo_almost_empty),
+    .almost_full_o  (fifo_almost_full)
 );
 assign fifo_push = aes_output_valid;
-assign fifo_pop  = (!fifo_empty) & din_valid_i;
+assign fifo_pop  = din_valid_i & din_ready_o;
 
 
 //////////////////////////////////////////////////////////////////////
@@ -127,8 +137,7 @@ always_ff @(posedge clk or negedge rst_n) begin
         counter_reg <= 128'h0;
     end else begin
         if (iv_valid_i)
-            counter_reg <= iv_i; // For CTR
-            // counter_reg <= {iv_i, 32'h1}; // For GCTR
+            counter_reg <= iv_i;
 
         else if (!fifo_full & aes_input_valid)
             counter_reg <= counter_next;
@@ -182,7 +191,7 @@ end
 
 assign key_ready_o  = key_exp_ready;
 
-assign din_ready_o  = !fifo_empty;  // Ready when FIFO is not empty
+assign din_ready_o  = !fifo_empty & dout_ready_i;
 
 assign dout_o       = dout_reg ^ fifo_dout;
 assign dout_valid_o = dout_valid_reg;

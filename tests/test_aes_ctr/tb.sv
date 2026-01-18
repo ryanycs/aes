@@ -21,6 +21,7 @@ logic                din_valid_i;
 logic                din_ready_o;
 logic [127:0]        dout_o;
 logic                dout_valid_o;
+logic                dout_ready_i;
 
 logic [KEY_SIZE-1:0] key        [0:0];
 logic [127:0]        iv         [0:0];
@@ -66,10 +67,11 @@ aes_ctr dut(
     .din_valid_i,
     .din_ready_o,
     .dout_o,
-    .dout_valid_o
+    .dout_valid_o,
+    .dout_ready_i
 );
 
-always #(`CYCLE/2) clk = ~clk;
+always #(`CYCLE/2) clk <= ~clk;
 
 initial begin
     clk = 1'b0;
@@ -93,6 +95,7 @@ initial begin
     iv_valid_i   = 1'b0;
     din_i        = 128'h0;
     din_valid_i  = 1'b0;
+    dout_ready_i = 1'b1;
 
     wait (rst_n == 1'b1);
     @(posedge clk);
@@ -100,27 +103,30 @@ initial begin
     // Configure key and IV
     key_i       = key[0];
     key_valid_i = 1'b1;
-    iv_i       = iv[0];
-    iv_valid_i = 1'b1;
+    iv_i        = iv[0];
+    iv_valid_i  = 1'b1;
     @(posedge clk);
     key_valid_i = 1'b0;
-    iv_valid_i = 1'b0;
+    iv_valid_i  = 1'b0;
+end
+
+always @(*) begin
+    din_valid_i = (i < `NUM_TESTS);
+    din_i       = (i >= `NUM_TESTS) ? 128'h0 : plaintext[i];
 end
 
 always @(posedge clk) begin
     if (i < `NUM_TESTS && din_ready_o) begin
-        din_valid_i <= 1'b1;
-        din_i <= plaintext[i];
         i <= i + 1;
     end
 end
 
 // Check outputs
 always @(posedge clk) begin
-    if (dout_valid_o) begin
+    if (dout_valid_o && dout_ready_i) begin
         if (dout_o !== ciphertext[recv]) begin
             $display("Mismatch at test %0d: expected %h, got %h", recv, ciphertext[recv], dout_o);
-            error = error + 1;
+            error <= error + 1;
         end
         recv <= recv + 1;
     end
