@@ -19,7 +19,9 @@ module fifo #(
     output logic [DATA_WIDTH-1:0] data_o,
 
     output logic                  empty_o,
-    output logic                  full_o
+    output logic                  full_o,
+    output logic                  almost_empty_o,
+    output logic                  almost_full_o
 );
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -105,8 +107,10 @@ end
 // Output
 ////////////////////////////////////////////////////////////////////////////////
 
-assign data_o  = data_reg;
-assign full_o  = is_full;
-assign empty_o = is_empty;
+assign data_o         = data_reg;
+assign full_o         = is_full;
+assign empty_o        = is_empty;
+assign almost_empty_o = (count <= 1);
+assign almost_full_o  = (count >= DEPTH - 2);
 
 endmodule
