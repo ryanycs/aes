@@ -34,6 +34,7 @@ int error = 0;
 gf128_mul dut (
     .clk,
     .rst_n,
+    .en (1'b1),
     .valid_i,
     .a_i,
     .b_i,

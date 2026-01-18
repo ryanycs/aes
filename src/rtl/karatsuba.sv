@@ -10,6 +10,7 @@ module karatsuba #(
 )(
     input  logic               clk,
     input  logic               rst_n,
+    input  logic               en,
 
     input  logic               valid_i,
     input  logic [WIDTH-1:0]   a_i,
@@ -37,6 +38,7 @@ generate
         ) u_karatsuba_core (
             .clk,
             .rst_n,
+            .en,
             .valid_i,
             .a_i,
             .b_i,

@@ -9,6 +9,7 @@ module karatsuba_core #(
 )(
     input  logic               clk,
     input  logic               rst_n,
+    input  logic               en,
 
     input  logic               valid_i,
     input  logic [WIDTH-1:0]   a_i,
@@ -62,6 +63,7 @@ karatsuba #(
 ) u_karatsuba_z0 (
     .clk,
     .rst_n,
+    .en,
     .valid_i,
     .a_i      (a_lo),
     .b_i      (b_lo),
@@ -75,6 +77,7 @@ karatsuba #(
 ) u_karatsuba_z1 (
     .clk,
     .rst_n,
+    .en,
     .valid_i,
     .a_i      (a_lo ^ a_hi),
     .b_i      (b_lo ^ b_hi),
@@ -88,6 +91,7 @@ karatsuba #(
 ) u_karatsuba_z2 (
     .clk,
     .rst_n,
+    .en,
     .valid_i,
     .a_i      (a_hi),
     .b_i      (b_hi),
@@ -109,7 +113,7 @@ assign result_next = (
 always @(posedge clk or negedge rst_n) begin
     if (!rst_n) begin
         result_reg <= { (2*WIDTH){1'b0} };
-    end else begin
+    end else if (en) begin
         if (result_valid) begin
             result_reg <= result_next;
         end
@@ -120,7 +124,7 @@ end
 always @(posedge clk or negedge rst_n) begin
     if (!rst_n) begin
         valid_reg <= 1'b0;
-    end else begin
+    end else if (en) begin
         valid_reg <= result_valid;
     end
 end
