@@ -317,7 +317,10 @@ always_ff @(posedge clk or negedge rst_n) begin
     if (!rst_n) begin
         block_count_reg <= 57'h0;
     end else begin
-        if (din_valid_i & din_ready_o)
+        if (state_reg == S_IDLE)
+            block_count_reg <= 57'h0;
+
+        else if (din_valid_i & din_ready_o)
             block_count_reg <= block_count_reg + 57'h1;
     end
 end
