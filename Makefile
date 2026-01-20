@@ -25,7 +25,13 @@ list_tests:
 		echo "[Error] Test not found: $*"; \
 		exit 1; \
 	fi
-	echo "[Info] AES Key Length: $(GREEN)$(KEY_LENGTH)$(NC) bits"
+	@if [ ! -d "work" ]; then \
+		mkdir work; \
+	fi
+	@if [ ! -d "output" ]; then \
+		mkdir output; \
+	fi
+	@echo "[Info] AES Key Length: $(GREEN)$(KEY_LENGTH)$(NC) bits"
 	$(VLOG) tests/$*/tb.sv -f filelist.f $(INC_DIR) $(VLOG_FLAGS)
 	$(VSIM) -c work.tb $(VSIM_FLAGS)
 
@@ -34,5 +40,8 @@ list_tests:
 		echo "[Error] Test not found: $*"; \
 		exit 1; \
 	fi
-	echo "[Info] AES Key Length: $(GREEN)$(KEY_LENGTH)$(NC) bits"
+	@if [ ! -d "output" ]; then \
+		mkdir output; \
+	fi
+	@echo "[Info] AES Key Length: $(GREEN)$(KEY_LENGTH)$(NC) bits"
 	$(VCS) -R -full64 -sverilog tests/$*/tb.sv -f filelist.f $(INC_DIR) $(VCS_FLAGS)
