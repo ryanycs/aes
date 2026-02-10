@@ -4,7 +4,7 @@
 
 `define CYCLE 10
 `define MAX_CYCLES 1000
-`define NUM_TESTS 4
+`define NUM_TESTS 100
 
 module tb;
 
@@ -110,16 +110,39 @@ initial begin
     iv_valid_i  = 1'b0;
 end
 
+logic valid;
 always @(*) begin
-    din_valid_i = (i < `NUM_TESTS);
+    din_valid_i = (i < `NUM_TESTS && valid) ? 1'b1 : 1'b0;
     din_i       = (i >= `NUM_TESTS) ? 128'h0 : plaintext[i];
 end
 
+// randomly de-assert din_valid_i to test backpressure
 always @(posedge clk) begin
-    if (i < `NUM_TESTS && din_ready_o) begin
+    if (i < `NUM_TESTS) begin
+        if ($urandom_range(0, 10) < 7) begin
+            valid = 1'b0;
+        end else begin
+            valid = 1'b1;
+        end
+    end
+end
+
+// increment i when din is accepted
+always @(posedge clk) begin
+    if (i < `NUM_TESTS && din_ready_o && din_valid_i) begin
         i <= i + 1;
     end
 end
+
+// randomly de-assert dout_ready_i to test backpressure
+always @(posedge clk) begin
+    if ($urandom_range(0, 10) < 7) begin
+        dout_ready_i <= 1'b0;
+    end else begin
+        dout_ready_i <= 1'b1;
+    end
+end
+// assign dout_ready_i = dout_valid_o;
 
 // Check outputs
 always @(posedge clk) begin
