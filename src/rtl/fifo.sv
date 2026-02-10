@@ -11,6 +11,7 @@ module fifo #(
 )(
     input  logic                  clk,
     input  logic                  rst_n,
+    input  logic                  flush,
 
     input  logic                  push_i,
     input  logic [DATA_WIDTH-1:0] data_i,
@@ -64,6 +65,8 @@ end
 always_ff @(posedge clk or negedge rst_n) begin
     if (!rst_n) begin
         front <= {ADDR_WIDTH{1'b0}};
+    end else if (flush) begin
+        front <= {ADDR_WIDTH{1'b0}};
     end else begin
         if (pop_i & ~is_empty)
             front <= front + 1;
@@ -74,6 +77,8 @@ end
 always_ff @(posedge clk or negedge rst_n) begin
     if (!rst_n) begin
         rear <= {ADDR_WIDTH{1'b0}};
+    end else if (flush) begin
+        rear <= {ADDR_WIDTH{1'b0}};
     end else begin
         if (push_i & ~is_full)
             rear <= rear + 1;
@@ -83,6 +88,8 @@ end
 // count
 always_ff @(posedge clk or negedge rst_n) begin
     if (!rst_n) begin
+        count <= {(ADDR_WIDTH+1){1'b0}};
+    end else if (flush) begin
         count <= {(ADDR_WIDTH+1){1'b0}};
     end else begin
         case ({push_i & ~is_full, pop_i & ~is_empty})
@@ -98,7 +105,7 @@ always_ff @(posedge clk or negedge rst_n) begin
     if (!rst_n) begin
         data_reg <= {DATA_WIDTH{1'b0}};
     end else begin
-        data_reg <= (pop_i & ~is_empty) ? queue[front] : {DATA_WIDTH{1'b0}};
+        data_reg <= (pop_i & ~is_empty) ? queue[front] : data_reg;
     end
 end
 

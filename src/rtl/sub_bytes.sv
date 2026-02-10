@@ -6,6 +6,7 @@
 module sub_bytes(
     input  logic         clk,
     input  logic         rst_n,
+    input  logic         flush,
     input  logic         en,
 
     input  logic         valid_i,
@@ -32,6 +33,8 @@ endgenerate
 always_ff @(posedge clk or negedge rst_n) begin
     if (!rst_n) begin
         state_reg <= 128'd0;
+    end else if (flush) begin
+        state_reg <= 128'd0;
     end else if (en) begin
         state_reg <= s_box_out;
     end
@@ -40,6 +43,8 @@ end
 // out_valid
 always_ff @(posedge clk or negedge rst_n) begin
     if (!rst_n) begin
+        valid_o <= 1'b0;
+    end else if (flush) begin
         valid_o <= 1'b0;
     end else if (en) begin
         valid_o <= valid_i;

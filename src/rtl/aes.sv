@@ -17,6 +17,7 @@
 module aes(
     input  logic         clk,
     input  logic         rst_n,
+    input  logic         flush,
     input  logic         en,
 
     input  logic         valid_i,
@@ -45,6 +46,7 @@ generate
         round u_round_i(
             .clk,
             .rst_n,
+            .flush,
             .en,
             .valid_i     (round_valid[i]),
             .state_i     (round_state[i]),
@@ -59,6 +61,7 @@ generate
     ) u_final_round(
         .clk,
         .rst_n,
+        .flush,
         .en,
         .valid_i     (round_valid[Nr-1]),
         .state_i     (round_state[Nr-1]),

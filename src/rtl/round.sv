@@ -8,6 +8,7 @@ module round #(
 )(
     input  logic         clk,
     input  logic         rst_n,
+    input  logic         flush,
     input  logic         en,
     input  logic         valid_i,
     input  logic [127:0] state_i,
@@ -31,6 +32,7 @@ logic [127:0] add_round_key_out;
 sub_bytes u_sub_bytes(
     .clk,
     .rst_n,
+    .flush,
     .en,
     .valid_i (valid_i),
     .state_i (state_i),
@@ -76,6 +78,8 @@ endgenerate
 always_ff @(posedge clk or negedge rst_n) begin
     if (!rst_n) begin
         valid_o <= 1'b0;
+    end else if (flush) begin
+        valid_o <= 1'b0;
     end else if (en) begin
         valid_o <= add_round_key_valid;
     end
@@ -84,6 +88,8 @@ end
 // state_o
 always_ff @(posedge clk or negedge rst_n) begin
     if (!rst_n) begin
+        state_o <= 128'd0;
+    end else if (flush) begin
         state_o <= 128'd0;
     end else if (en) begin
         state_o <= add_round_key_out;

@@ -12,38 +12,45 @@ module aes_ctr(
     // Key
     input  logic [KEY_SIZE-1:0] key_i,
     input  logic                key_valid_i,
-    output logic                key_ready_o,  // Key expansion module is ready
+    output logic                key_ready_o,
 
-    // IV (Initialization Vector)
+    // IV
     input  logic [127:0]        iv_i,
     input  logic                iv_valid_i,
+    output logic                iv_ready_o,
 
-    // Data Input/Output
+    // Data Input
     input  logic [127:0]        din_i,
     input  logic                din_valid_i,
     output logic                din_ready_o,
+    input  logic                din_last_i,
+    input  logic [15:0]         din_keep_i,
 
+    // Data Output
     output logic [127:0]        dout_o,
     output logic                dout_valid_o,
-    input  logic                dout_ready_i
+    input  logic                dout_ready_i,
+    output logic                dout_last_o,
+    output logic [15:0]         dout_keep_o
 );
 
-//////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
 // Register
-//////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
 
 logic [127:0] counter_reg;
 
 logic         key_cfg_done_reg;  // Round keys is generated
-
 logic         iv_cfg_done_reg;   // IV is set
 
 logic [127:0] dout_reg;
 logic         dout_valid_reg;
+logic         dout_last_reg;
+logic [15:0]  dout_keep_reg;
 
-//////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
 // Wire
-//////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
 
 // counter
 logic [127:0] counter_next;
@@ -65,19 +72,16 @@ logic [127:0] fifo_dout;
 logic         fifo_empty;
 logic         fifo_full;
 
-/* verilator lint_off UNUSED */
-logic         fifo_almost_empty;
-logic         fifo_almost_full;
-/* verilator lint_on UNUSED */
+logic         unused_fifo_almost_empty;
+logic         unused_fifo_almost_full;
 
 // Flush signal
 logic         flush;
-assign flush = !(key_valid_i | iv_valid_i);  // Flush when new key or IV set
+assign flush = key_valid_i | iv_valid_i;  // Flush when new key or IV set
 
-
-///////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
 // Instance
-///////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
 
 // inc32
 inc #(.s(32)) u_inc32 (
@@ -85,6 +89,7 @@ inc #(.s(32)) u_inc32 (
     .data_o (counter_next)
 );
 
+// Key Expansion
 key_expansion u_key_expansion(
     .clk,
     .rst_n,
@@ -98,7 +103,8 @@ key_expansion u_key_expansion(
 // AES core
 aes u_aes(
     .clk,
-    .rst_n        (rst_n & flush),
+    .rst_n,
+    .flush,
     .en           (!fifo_full),       // Enable when FIFO is not full
     .valid_i      (aes_input_valid),
     .plaintext_i  (counter_reg),
@@ -113,23 +119,24 @@ fifo #(
     .DEPTH(2)
 ) u_fifo (
     .clk,
-    .rst_n          (rst_n & flush),
+    .rst_n,
+    .flush,
     .push_i         (fifo_push),
     .data_i         (aes_ciphertext),
     .pop_i          (fifo_pop),
     .data_o         (fifo_dout),
     .empty_o        (fifo_empty),
     .full_o         (fifo_full),
-    .almost_empty_o (fifo_almost_empty),
-    .almost_full_o  (fifo_almost_full)
+    .almost_empty_o (unused_fifo_almost_empty),
+    .almost_full_o  (unused_fifo_almost_full)
 );
 assign fifo_push = aes_output_valid;
 assign fifo_pop  = din_valid_i & din_ready_o;
 
 
-//////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
 // Sequential Logic
-//////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
 
 // counter
 always_ff @(posedge clk or negedge rst_n) begin
@@ -171,29 +178,42 @@ end
 always_ff @(posedge clk or negedge rst_n) begin
     if (!rst_n) begin
         dout_valid_reg <= 1'b0;
-    end else begin
-        dout_valid_reg <= fifo_pop;
+    end else if (din_valid_i & din_ready_o) begin
+        dout_valid_reg <= 1'b1;
+    end else if (dout_valid_o & dout_ready_i) begin
+        dout_valid_reg <= 1'b0;
     end
 end
 
 // dout
 always_ff @(posedge clk or negedge rst_n) begin
     if (!rst_n) begin
-        dout_reg <= 128'h0;
+        dout_reg      <= 128'h0;
+        dout_last_reg <= 1'b0;
+        dout_keep_reg <= 16'h0;
     end else if (fifo_pop) begin
-        dout_reg <= din_i;
+        dout_reg      <= din_i;
+        dout_last_reg <= din_last_i;
+        dout_keep_reg <= din_keep_i;
     end
 end
 
-//////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
 // Output
-//////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
 
 assign key_ready_o  = key_exp_ready;
+assign iv_ready_o   = 1'b1;  // Always ready to accept IV
 
-assign din_ready_o  = !fifo_empty & dout_ready_i;
+// din_ready is asserted when:
+// 1. FIFO is not empty
+// 2. dout has been consumed or dout does not buffer any valid data (avoid bubble)
+assign din_ready_o  = !fifo_empty
+                      && (dout_ready_i || (!dout_valid_reg));
 
 assign dout_o       = dout_reg ^ fifo_dout;
 assign dout_valid_o = dout_valid_reg;
+assign dout_last_o  = dout_last_reg;
+assign dout_keep_o  = dout_keep_reg;
 
 endmodule
