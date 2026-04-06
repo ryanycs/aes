@@ -10,10 +10,10 @@ src/rtl/inc.sv
 src/rtl/round.sv
 src/rtl/aes.sv
 src/rtl/aes_ctr.sv
-src/rtl/karatsuba.sv
-src/rtl/karatsuba_core.sv
-src/rtl/gf_mul.sv
-src/rtl/gf128_reduction.sv
+src/rtl/karatsuba_top.sv
+src/rtl/karatsuba_stage.sv
+src/rtl/karatsuba_base.sv
+src/rtl/gf128_reduce.sv
 src/rtl/gf128_mul.sv
 src/rtl/ghash.sv
 src/rtl/aes_gcm.sv
